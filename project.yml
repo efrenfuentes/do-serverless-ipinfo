@@ -1,0 +1,27 @@
+parameters: {}
+environment: {}
+packages:
+    - name: ip
+      shared: false
+      environment: {}
+      parameters: {}
+      annotations: {}
+      functions:
+        - name: my
+          binary: false
+          main: ""
+          runtime: go:default
+          web: true
+          parameters: {}
+          environment: {}
+          annotations: {}
+          limits: {}
+        - name: info
+          binary: false
+          main: ""
+          runtime: go:default
+          web: true
+          parameters: {}
+          environment: {}
+          annotations: {}
+          limits: {}
