@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Consulta la IP de salida por ambas familias y escribe un solo documento JSON."""
+
+import ipaddress
+import json
+import subprocess
+import sys
+from urllib.parse import urlencode
+
+BASE = "https://ip.efrenfuentes.net/ip/"
+
+
+def request(version, path):
+    result = subprocess.run(
+        ["curl", f"-{version}", "--noproxy", "*", "--fail", "--silent",
+         "--show-error", "--max-time", "10", BASE + path],
+        capture_output=True, text=True,
+    )
+    if result.returncode:
+        raise ValueError(result.stderr.strip() or "Error de conexión")
+    data = json.loads(result.stdout)
+    if not isinstance(data, dict):
+        raise ValueError("Se esperaba un objeto JSON")
+    return data
+
+
+def lookup(version):
+    data = request(version, "my")
+    ip = data.get("ip")
+    if not isinstance(ip, str) or ipaddress.ip_address(ip).version != version:
+        raise ValueError("La IP devuelta no corresponde a la familia solicitada")
+    # Compatibilidad con despliegues que solo devuelven el campo ip.
+    if "info" not in data:
+        data["family"] = f"ipv{version}"
+        try:
+            data["info"] = request(version, "info?" + urlencode({"ip": ip}))
+        except ValueError as error:
+            data.update(info=None, error=str(error))
+    return data
+
+
+def main():
+    output = {}
+    for version in (4, 6):
+        family = f"ipv{version}"
+        try:
+            output[family] = lookup(version)
+        except (ValueError, OSError) as error:
+            print(f"{family}: {error}", file=sys.stderr)
+            output[family] = None
+    print(json.dumps(output, indent=2, ensure_ascii=False))
+    return 0 if any(output.values()) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
